@@ -1,0 +1,331 @@
+# Docker Compose Configuration für Web Video Downloader
+# Umfasst Development, Testing und Production Environments
+
+version: '3.8'
+
+# ==============================================================================
+# SHARED CONFIGURATION
+# ==============================================================================
+x-common-variables: &common-variables
+  PYTHONPATH: /app
+  LOG_LEVEL: INFO
+  CONFIG_PATH: /app/config/config.json
+  OUTPUT_DIR: /app/downloads
+
+x-common-volumes: &common-volumes
+  - ./downloads:/app/downloads
+  - ./logs:/app/logs
+  - ./config:/app/config
+  - ./data:/app/data
+
+# ==============================================================================
+# SERVICES
+# ==============================================================================
+services:
+
+  # ----------------------------------------------------------------------------
+  # MAIN APPLICATION - Production Ready
+  # ----------------------------------------------------------------------------
+  video-downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
+    container_name: video-downloader-app
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+      NODE_ENV: production
+      # NordVPN Credentials (aus .env oder Environment)
+      NORDVPN_USERNAME: ${NORDVPN_USERNAME:-}
+      NORDVPN_PASSWORD: ${NORDVPN_PASSWORD:-}
+    volumes: *common-volumes
+    networks:
+      - video-downloader-network
+    cap_add:
+      - NET_ADMIN  # Für VPN-Funktionalität
+    devices:
+      - /dev/net/tun  # TUN-Device für VPN
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1  # IPv6 deaktivieren für VPN-Stabilität
+    healthcheck:
+      test: ["CMD", "python", "-c", "from video_downloader import WebVideoDownloader; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - database
+      - redis
+    command: ["python", "video_downloader.py", "--config", "/app/config/config.json"]
+    labels:
+      - "traefik.enable=false"
+      - "com.docker.compose.service=video-downloader"
+
+  # ----------------------------------------------------------------------------
+  # DATABASE - SQLite in Container für Persistenz
+  # ----------------------------------------------------------------------------
+  database:
+    image: alpine:latest
+    container_name: video-downloader-db
+    restart: unless-stopped
+    volumes:
+      - ./data/db:/data
+      - ./scripts/init-db.sh:/init-db.sh:ro
+    command: sh -c "chmod +x /init-db.sh && /init-db.sh && tail -f /dev/null"
+    networks:
+      - video-downloader-network
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/download_history.db"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # REDIS - Für Session Management und Caching
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: video-downloader-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+      - ./config/redis.conf:/etc/redis/redis.conf:ro
+    networks:
+      - video-downloader-network
+    command: redis-server /etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    sysctls:
+      - net.core.somaxconn=65535
+
+  # ----------------------------------------------------------------------------
+  # MONITORING - Performance und Metrics
+  # ----------------------------------------------------------------------------
+  monitoring:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: video-downloader-monitor
+    restart: unless-stopped
+    environment:
+      <<: *common-variables
+      MONITOR_MODE: "true"
+    volumes: *common-volumes
+    networks:
+      - video-downloader-network
+    command: ["monitor"]
+    depends_on:
+      - video-downloader
+      - redis
+    profiles:
+      - monitoring
+
+  # ----------------------------------------------------------------------------
+  # WEB UI - Optional Dashboard (Future Enhancement)
+  # ----------------------------------------------------------------------------
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    container_name: video-downloader-ui
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: http://video-downloader:8080
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./web-ui/config:/app/config
+    networks:
+      - video-downloader-network
+    depends_on:
+      - video-downloader
+      - redis
+    profiles:
+      - ui
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.video-downloader.rule=Host(`video-downloader.local`)"
+
+  # ----------------------------------------------------------------------------
+  # DEVELOPMENT SERVICE
+  # ----------------------------------------------------------------------------
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: video-downloader-dev
+    environment:
+      <<: *common-variables
+      LOG_LEVEL: DEBUG
+      PYTHONDONTWRITEBYTECODE: 1
+      DEVELOPMENT: "true"
+    volumes:
+      # Bind-mount für Live-Code-Editing
+      - .:/app
+      - /app/__pycache__
+      - dev-cache:/home/appuser/.cache
+    networks:
+      - video-downloader-network
+    ports:
+      - "8888:8888"  # Jupyter/Debug Port
+    command: ["shell"]
+    profiles:
+      - development
+    cap_add:
+      - SYS_PTRACE  # Für Debugging
+
+  # ----------------------------------------------------------------------------
+  # TESTING SERVICE
+  # ----------------------------------------------------------------------------
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: video-downloader-test
+    environment:
+      <<: *common-variables
+      PYTHONPATH: "/app:/app/tests"
+      TESTING: "true"
+    volumes:
+      - .:/app
+      - test-reports:/app/test-reports
+    networks:
+      - video-downloader-network
+    command: ["python", "-m", "pytest", "-v", "--cov=.", "--cov-report=html:/app/test-reports/coverage"]
+    profiles:
+      - testing
+
+# ==============================================================================
+# NETWORKS
+# ==============================================================================
+networks:
+  video-downloader-network:
+    name: video-downloader-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ==============================================================================
+# VOLUMES
+# ==============================================================================
+volumes:
+  redis-data:
+    name: video-downloader-redis-data
+    driver: local
+  
+  dev-cache:
+    name: video-downloader-dev-cache
+    driver: local
+  
+  test-reports:
+    name: video-downloader-test-reports
+    driver: local
+
+# ==============================================================================
+# ADDITIONAL CONFIGURATIONS
+# ==============================================================================
+
+# Development Override
+---
+# docker-compose.override.yml (automatisch geladen in Development)
+version: '3.8'
+
+services:
+  video-downloader:
+    environment:
+      LOG_LEVEL: DEBUG
+      DEVELOPMENT: "true"
+    volumes:
+      - .:/app  # Live-Code-Editing
+    command: ["python", "video_downloader.py", "--log-level=DEBUG", "--no-headless"]
+
+---
+# docker-compose.prod.yml (für Production)
+version: '3.8'
+
+services:
+  video-downloader:
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 3
+    environment:
+      LOG_LEVEL: INFO
+      HEADLESS: "true"
+    healthcheck:
+      interval: 60s
+      timeout: 30s
+      retries: 5
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+
+---
+# docker-compose.test.yml (für CI/CD Testing)
+version: '3.8'
+
+services:
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    environment:
+      PYTHONPATH: "/app:/app/tests"
+      CI: "true"
+    volumes:
+      - .:/app
+      - test-results:/app/test-results
+    command: |
+      sh -c "
+        python -m pytest tests/ -v \
+          --cov=. \
+          --cov-report=xml:/app/test-results/coverage.xml \
+          --cov-report=html:/app/test-results/coverage-html \
+          --junit-xml=/app/test-results/junit.xml \
+          --tb=short
+      "
+    networks:
+      - video-downloader-network
+
+  lint-check:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    volumes:
+      - .:/app
+    command: |
+      sh -c "
+        black --check . &&
+        flake8 . &&
+        mypy . --ignore-missing-imports
+      "
+
+volumes:
+  test-results:
+    driver: local
