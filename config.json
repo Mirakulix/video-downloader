@@ -1,0 +1,75 @@
+{
+  "sites": {
+    "example-video-site.com": {
+      "video_button": [
+        "button.play-video",
+        ".video-play-btn", 
+        "a[data-action='play']"
+      ],
+      "download_link": [
+        "a[href*='.mp4']",
+        "a.download-btn",
+        "button[data-download-url]"
+      ],
+      "login_username": null,
+      "login_password": null,
+      "login_url": "https://example-video-site.com/login",
+      "login_username_field": "input[name='email']",
+      "login_password_field": "input[name='password']", 
+      "login_submit_button": "button[type='submit']",
+      "wait_after_login": 3,
+      "custom_headers": {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8"
+      },
+      "human_delay_min": 1.5,
+      "human_delay_max": 4.0
+    },
+    "streaming-platform.de": {
+      "video_button": [
+        ".player-button",
+        "button[aria-label*='play']"
+      ],
+      "download_link": [
+        "a.download",
+        "[data-video-url]"
+      ],
+      "login_username": "your-username@example.com",
+      "login_password": "your-secure-password",
+      "login_url": "https://streaming-platform.de/auth/login",
+      "wait_after_login": 5,
+      "human_delay_min": 2.0,
+      "human_delay_max": 5.0
+    },
+    "own-video-portal.com": {
+      "video_button": [
+        ".video-container button",
+        "[data-play='true']"
+      ],
+      "download_link": [
+        "a[download]",
+        ".download-link"
+      ],
+      "custom_headers": {
+        "X-API-Key": "your-api-key-here",
+        "User-Agent": "VideoDownloader/1.0"
+      }
+    }
+  },
+  "output_directory": "./downloads",
+  "nordvpn_enabled": true,
+  "ip_rotation_interval_min": 300,
+  "ip_rotation_interval_max": 1800,
+  "user_agents": [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0"
+  ],
+  "headless": false,
+  "timeout": 30,
+  "concurrent_downloads": 3,
+  "retry_attempts": 3,
+  "log_level": "INFO"
+}
