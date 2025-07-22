@@ -1,202 +1,398 @@
-{
-  // ================================================================
-  // VSCode Settings für Web Video Downloader Development
-  // ================================================================
-  
-  // Python Configuration
-  "python.defaultInterpreterPath": "./venv/bin/python",
-  "python.terminal.activateEnvironment": true,
-  "python.terminal.activateEnvInCurrentTerminal": true,
-  
-  // Linting & Formatting
-  "python.linting.enabled": true,
-  "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": [
-    "--max-line-length=100",
-    "--extend-ignore=E203,W503",
-    "--exclude=venv,.git,__pycache__"
-  ],
-  "python.linting.mypyEnabled": true,
-  "python.linting.banditEnabled": true,
-  "python.linting.pylintEnabled": false,
-  
-  // Black Formatter
-  "python.formatting.provider": "black",
-  "python.formatting.blackArgs": [
-    "--line-length=100",
-    "--target-version=py39"
-  ],
-  
-  // Import Organization
-  "python.sortImports.args": [
-    "--profile=black",
-    "--line-length=100"
-  ],
-  
-  // Testing Configuration
-  "python.testing.pytestEnabled": true,
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": [
-    "tests",
-    "-v",
-    "--tb=short"
-  ],
-  
-  // Type Checking
-  "python.analysis.typeCheckingMode": "basic",
-  "python.analysis.autoImportCompletions": true,
-  "python.analysis.autoSearchPaths": true,
-  "python.analysis.diagnosticMode": "workspace",
-  "python.analysis.stubPath": "./typings",
-  
-  // Editor Configuration
-  "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": true,
-    "source.fixAll": true
-  },
-  "editor.rulers": [100],
-  "editor.tabSize": 4,
-  "editor.insertSpaces": true,
-  "editor.trimAutoWhitespace": true,
-  
-  // Files & Workspace
-  "files.exclude": {
-    "**/__pycache__": true,
-    "**/*.pyc": true,
-    "**/.pytest_cache": true,
-    "**/htmlcov": true,
-    "**/.coverage": true,
-    "**/node_modules": true,
-    "**/.git": true,
-    "**/venv": true,
-    "**/.venv": true,
-    "**/*.egg-info": true
-  },
-  "files.watcherExclude": {
-    "**/venv/**": true,
-    "**/.git/**": true,
-    "**/node_modules/**": true,
-    "**/__pycache__/**": true
-  },
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true,
-  "files.trimFinalNewlines": true,
-  
-  // Search Configuration
-  "search.exclude": {
-    "**/venv": true,
-    "**/.git": true,
-    "**/node_modules": true,
-    "**/__pycache__": true,
-    "**/htmlcov": true,
-    "**/*.pyc": true
-  },
-  
-  // Git Integration
-  "git.ignoreLimitWarning": true,
-  "git.autofetch": true,
-  "git.enableSmartCommit": true,
-  "git.confirmSync": false,
-  
-  // Docker Configuration
-  "docker.languageserver.formatter.ignoreMultilineInstructions": true,
-  "docker.attachShellCommand.linuxContainer": "/bin/bash",
-  
-  // Terminal Configuration
-  "terminal.integrated.env.linux": {
-    "PYTHONPATH": "${workspaceFolder}"
-  },
-  "terminal.integrated.env.osx": {
-    "PYTHONPATH": "${workspaceFolder}"
-  },
-  "terminal.integrated.env.windows": {
-    "PYTHONPATH": "${workspaceFolder}"
-  },
-  
-  // Extensions & IntelliSense
-  "extensions.ignoreRecommendations": false,
-  "workbench.editor.enablePreview": false,
-  "explorer.confirmDelete": false,
-  "explorer.confirmDragAndDrop": false,
-  
-  // Language Specific Settings
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    }
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
-  },
-  "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[yaml]": {
-    "editor.defaultFormatter": "redhat.vscode-yaml",
-    "editor.formatOnSave": true
-  },
-  "[dockerfile]": {
-    "editor.defaultFormatter": "ms-azuretools.vscode-docker"
-  },
-  "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true,
-    "editor.wordWrap": "on"
-  },
-  
-  // Debugging Configuration
-  "debug.console.fontSize": 12,
-  "debug.console.wordWrap": true,
-  "debug.terminal.clearBeforeReusing": true,
-  
-  // Performance Settings
-  "python.analysis.indexing": true,
-  "python.analysis.packageIndexDepths": [
-    {
-      "name": "",
-      "depth": 2
-    }
-  ],
-  
-  // Security & Privacy
-  "telemetry.telemetryLevel": "off",
-  "update.showReleaseNotes": false,
-  
-  // Jupyter Integration (für Development Notebooks)
-  "jupyter.askForKernelRestart": false,
-  "jupyter.alwaysTrustNotebooks": true,
-  
-  // REST Client (für API-Tests)
-  "rest-client.environmentVariables": {
-    "local": {
-      "baseUrl": "http://localhost:8000",
-      "token": "development-token"
-    }
-  },
-  
-  // Live Server (für Dokumentation)
-  "liveServer.settings.donotShowInfoMsg": true,
-  "liveServer.settings.donotVerifyTags": true,
-  
-  // Problem Matchers
-  "problemMatcher.fileLocation": "relative",
-  
-  // Code Lens
-  "python.analysis.inlayHints.functionReturnTypes": true,
-  "python.analysis.inlayHints.variableTypes": true,
-  
-  // Auto-completion
-  "python.analysis.completeFunctionParens": true,
-  "python.analysis.autoImportCompletions": true,
-  
-  // Workspace Trust
-  "security.workspace.trust.untrustedFiles": "open",
-  
-  // Custom Tasks
-  "tasks.version": "2.0.0"
-}
+name: 🔒 Security & Vulnerability Scanning
+
+on:
+  schedule:
+    # Täglich um 2:00 UTC ausführen
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main ]
+    paths:
+      - 'requirements*.txt'
+      - 'Dockerfile*'
+      - '*.py'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'requirements*.txt'
+      - 'Dockerfile*'
+      - '*.py'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ================================================================
+  # DEPENDENCY VULNERABILITY SCANNING
+  # ================================================================
+  dependency-scan:
+    name: 🔍 Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety pipenv-to-requirements pip-audit
+        pip install -r requirements.txt
+    
+    - name: 🛡️ Safety check - Production dependencies
+      run: |
+        safety check --json --output safety-prod.json
+        safety check --short-report
+      continue-on-error: true
+    
+    - name: 🛡️ Safety check - Development dependencies
+      run: |
+        pip install -r requirements-dev.txt
+        safety check --json --output safety-dev.json
+        safety check --short-report
+      continue-on-error: true
+    
+    - name: 🔍 pip-audit scan
+      run: |
+        pip-audit --format=json --output=pip-audit.json
+        pip-audit --format=text
+      continue-on-error: true
+    
+    - name: 📊 GitHub Advisory Database check
+      uses: pypa/gh-action-pip-audit@v1.0.8
+      with:
+        inputs: requirements.txt requirements-dev.txt
+        summary: true
+      continue-on-error: true
+    
+    - name: 📤 Upload dependency scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dependency-scan-results
+        path: |
+          safety-*.json
+          pip-audit.json
+
+  # ================================================================
+  # CODE SECURITY SCANNING
+  # ================================================================
+  code-security:
+    name: 🔐 Code Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Für Semgrep
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: 📦 Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] semgrep
+    
+    - name: 🛡️ Bandit security scan
+      run: |
+        bandit -r . \
+          -x tests/,venv/ \
+          -f json \
+          -o bandit-security-report.json
+        
+        bandit -r . \
+          -x tests/,venv/ \
+          -f txt \
+          -ll -i
+      continue-on-error: true
+    
+    - name: 🔎 Semgrep security scan
+      run: |
+        semgrep --config=auto \
+          --json \
+          --output=semgrep-security-report.json \
+          --exclude=tests/ \
+          --exclude=venv/ \
+          .
+        
+        semgrep --config=auto \
+          --exclude=tests/ \
+          --exclude=venv/ \
+          .
+      continue-on-error: true
+    
+    - name: 🐛 CodeQL Analysis Setup
+      uses: github/codeql-action/init@v2
+      with:
+        languages: python
+        queries: security-and-quality
+    
+    - name: 🔍 Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:python"
+    
+    - name: 📤 Upload security scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: code-security-results
+        path: |
+          bandit-security-report.json
+          semgrep-security-report.json
+
+  # ================================================================
+  # DOCKER SECURITY SCANNING
+  # ================================================================
+  docker-security:
+    name: 🐳 Docker Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: 🏗️ Build Docker image for scanning
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: video-downloader:security-scan
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: 🔍 Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'video-downloader:security-scan'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: 📊 Trivy detailed report
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'video-downloader:security-scan'
+        format: 'json'
+        output: 'trivy-detailed.json'
+    
+    - name: 🔍 Grype vulnerability scanner
+      run: |
+        # Install Grype
+        curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+        
+        # Scan image
+        grype video-downloader:security-scan -o json > grype-results.json
+        grype video-downloader:security-scan -o table
+      continue-on-error: true
+    
+    - name: 🐳 Docker Scout security scan
+      uses: docker/scout-action@v1
+      if: github.event_name == 'pull_request'
+      with:
+        command: cves
+        image: video-downloader:security-scan
+        only-severities: critical,high
+        write-comment: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
+    
+    - name: 📤 Upload Docker security results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: 📤 Upload Docker scan artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: docker-security-results
+        path: |
+          trivy-*.json
+          trivy-*.sarif
+          grype-results.json
+
+  # ================================================================
+  # SECRET SCANNING
+  # ================================================================
+  secret-scan:
+    name: 🔑 Secret & Credential Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Für gitleaks historie
+    
+    - name: 🔍 TruffleHog OSS Secret Scanning
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+      continue-on-error: true
+    
+    - name: 🔑 Gitleaks secret detection
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      continue-on-error: true
+    
+    - name: 🕵️ detect-secrets scan
+      run: |
+        pip install detect-secrets
+        
+        # Initialisiere baseline falls nicht vorhanden
+        if [ ! -f .secrets.baseline ]; then
+          detect-secrets scan --baseline .secrets.baseline
+        fi
+        
+        # Scanne nach neuen secrets
+        detect-secrets scan --baseline .secrets.baseline --force-use-all-plugins
+        
+        # Audit secrets
+        detect-secrets audit .secrets.baseline --report --fail-on-unaudited
+      continue-on-error: true
+
+  # ================================================================
+  # COMPLIANCE & POLICY CHECKING
+  # ================================================================
+  compliance:
+    name: 📋 Compliance & Policy Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 📋 License compliance check
+      run: |
+        pip install pip-licenses
+        
+        # Erstelle License-Report
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses --format=csv --output-file=licenses.csv
+        pip-licenses --summary
+        
+        # Prüfe auf problematische Lizenzen
+        pip-licenses | grep -E "(GPL|AGPL|LGPL)" || echo "No copyleft licenses found"
+      continue-on-error: true
+    
+    - name: 🔍 SBOM (Software Bill of Materials) Generation
+      run: |
+        pip install cyclonedx-bom
+        
+        # Generiere SBOM
+        cyclonedx-py -o sbom.json --format json
+        cyclonedx-py -o sbom.xml --format xml
+      continue-on-error: true
+    
+    - name: 📤 Upload compliance reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: compliance-reports
+        path: |
+          licenses.*
+          sbom.*
+
+  # ================================================================
+  # SECURITY SUMMARY REPORT
+  # ================================================================
+  security-summary:
+    name: 📊 Security Summary Report
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-security, docker-security, secret-scan, compliance]
+    if: always()
+    
+    steps:
+    - name: 📥 Download all security artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: 📊 Generate security summary
+      run: |
+        echo "# 🔒 Security Scan Summary" > security-summary.md
+        echo "Generated on: $(date)" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        echo "## 📋 Scan Results Overview" >> security-summary.md
+        echo "| Check | Status |" >> security-summary.md
+        echo "|-------|--------|" >> security-summary.md
+        echo "| Dependency Scan | ${{ needs.dependency-scan.result }} |" >> security-summary.md
+        echo "| Code Security | ${{ needs.code-security.result }} |" >> security-summary.md
+        echo "| Docker Security | ${{ needs.docker-security.result }} |" >> security-summary.md
+        echo "| Secret Scan | ${{ needs.secret-scan.result }} |" >> security-summary.md
+        echo "| Compliance | ${{ needs.compliance.result }} |" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        # Zähle gefundene Vulnerabilities falls JSON-Files existieren
+        if [ -f dependency-scan-results/safety-prod.json ]; then
+          VULN_COUNT=$(jq '.vulnerabilities | length' dependency-scan-results/safety-prod.json 2>/dev/null || echo "0")
+          echo "## 🛡️ Dependency Vulnerabilities: $VULN_COUNT" >> security-summary.md
+        fi
+        
+        if [ -f docker-security-results/trivy-detailed.json ]; then
+          DOCKER_VULN=$(jq '.Results[]?.Vulnerabilities // [] | length' docker-security-results/trivy-detailed.json 2>/dev/null || echo "0")
+          echo "## 🐳 Docker Vulnerabilities: $DOCKER_VULN" >> security-summary.md
+        fi
+        
+        echo "" >> security-summary.md
+        echo "## 🔗 Detailed Reports" >> security-summary.md
+        echo "Detailed scan results are available in the GitHub Actions artifacts." >> security-summary.md
+        
+        cat security-summary.md
+    
+    - name: 📝 Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('security-summary.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+    
+    - name: 📤 Upload security summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-summary
+        path: security-summary.md
+    
+    - name: ❌ Fail if critical security issues found
+      if: needs.dependency-scan.result == 'failure' && github.ref == 'refs/heads/main'
+      run: |
+        echo "❌ Critical security vulnerabilities detected in main branch!"
+        echo "Please review and fix security issues before merging."
+        exit 1
