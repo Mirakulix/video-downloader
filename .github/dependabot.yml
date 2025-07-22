@@ -1,0 +1,197 @@
+# ================================================================
+# Dependabot Configuration für automatische Dependency Updates
+# ================================================================
+
+version: 2
+updates:
+  # ================================================================
+  # PYTHON DEPENDENCIES
+  # ================================================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    
+    # Update-Strategien
+    open-pull-requests-limit: 5
+    
+    # Gruppiere Updates für bessere Übersicht
+    groups:
+      # Core Dependencies
+      core-dependencies:
+        patterns:
+          - "pydantic*"
+          - "fastapi*"
+          - "httpx*"
+          - "aiohttp*"
+        
+      # Testing Dependencies
+      testing-dependencies:
+        patterns:
+          - "pytest*"
+          - "coverage*"
+          - "mock*"
+        
+      # Browser Automation
+      browser-automation:
+        patterns:
+          - "playwright*"
+          - "selenium*"
+        
+      # Video Processing
+      video-processing:
+        patterns:
+          - "yt-dlp*"
+          - "ffmpeg*"
+        
+      # Development Tools
+      dev-tools:
+        patterns:
+          - "black*"
+          - "flake8*"
+          - "mypy*"
+          - "isort*"
+    
+    # Commit-Nachrichten anpassen
+    commit-message:
+      prefix: "⬆️"
+      prefix-development: "⬆️ dev"
+      include: "scope"
+    
+    # PR-Labels
+    labels:
+      - "dependencies"
+      - "automated"
+    
+    # Reviewer zuweisen
+    reviewers:
+      - "maintainer-username"  # Hier echten Username eintragen
+    
+    # Assignees
+    assignees:
+      - "maintainer-username"
+    
+    # Nur bestimmte Updates zulassen
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+        update-type: "security"
+    
+    # Bestimmte Dependencies ignorieren
+    ignore:
+      # Ignoriere Major-Updates für stabile Dependencies
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major"]
+      
+      # Temporär problematische Packages ignorieren
+      # - dependency-name: "problematic-package"
+      #   versions: ["1.0.0"]
+
+  # ================================================================
+  # DOCKER DEPENDENCIES
+  # ================================================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "UTC"
+    
+    open-pull-requests-limit: 3
+    
+    commit-message:
+      prefix: "🐳"
+      include: "scope"
+    
+    labels:
+      - "docker"
+      - "dependencies"
+      - "automated"
+    
+    reviewers:
+      - "maintainer-username"
+
+  # ================================================================
+  # GITHUB ACTIONS
+  # ================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/.github/workflows"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+    
+    open-pull-requests-limit: 3
+    
+    commit-message:
+      prefix: "🔄"
+      include: "scope"
+    
+    labels:
+      - "github-actions"
+      - "dependencies"
+      - "automated"
+      - "ci/cd"
+    
+    reviewers:
+      - "maintainer-username"
+    
+    # Gruppe für Actions-Updates
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ================================================================
+  # NPM DEPENDENCIES (falls Frontend hinzugefügt wird)
+  # ================================================================
+  # - package-ecosystem: "npm"
+  #   directory: "/frontend"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "thursday"
+  #     time: "06:00"
+  #     timezone: "UTC"
+  #   
+  #   open-pull-requests-limit: 5
+  #   
+  #   groups:
+  #     react-ecosystem:
+  #       patterns:
+  #         - "react*"
+  #         - "@types/react*"
+  #     
+  #     build-tools:
+  #       patterns:
+  #         - "webpack*"
+  #         - "babel*"
+  #         - "typescript*"
+  #   
+  #   commit-message:
+  #     prefix: "📦 frontend"
+  #     include: "scope"
+  #   
+  #   labels:
+  #     - "frontend"
+  #     - "dependencies"
+  #     - "automated"
+
+# ================================================================
+# ERWEITERTE KONFIGURATION
+# ================================================================
+
+# Dependabot kann auch mit privaten Registries arbeiten
+# registries:
+#   private-registry:
+#     type: npm-registry
+#     url: https://private-registry.example.com
+#     username: ${{secrets.PRIVATE_REGISTRY_USERNAME}}
+#     password: ${{secrets.PRIVATE_REGISTRY_PASSWORD}}
+
+# Für Enterprise GitHub mit GHES
+# insecure-external-code-execution: allow
