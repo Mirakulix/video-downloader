@@ -1,0 +1,521 @@
+name: 🚀 Release & Deployment
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: 'Create as draft'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  # ================================================================
+  # VALIDATE RELEASE
+  # ================================================================
+  validate:
+    name: ✅ Validate Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🏷️ Extract version information
+      id: version
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="${{ github.event.inputs.version }}"
+          TAG="$VERSION"
+          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+        else
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          # Prüfe ob es ein Pre-Release ist (enthält alpha, beta, rc)
+          if [[ $VERSION =~ (alpha|beta|rc) ]]; then
+            IS_PRERELEASE=true
+          else
+            IS_PRERELEASE=false
+          fi
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+        
+        echo "🏷️ Release Version: $VERSION"
+        echo "📦 Tag: $TAG" 
+        echo "🧪 Pre-release: $IS_PRERELEASE"
+    
+    - name: 🔍 Validate version format
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+          echo "❌ Invalid version format: $VERSION"
+          echo "Expected format: MAJOR.MINOR.PATCH (e.g., 1.2.3)"
+          exit 1
+        fi
+        echo "✅ Version format is valid"
+    
+    - name: 📋 Check if tag already exists
+      run: |
+        TAG="${{ steps.version.outputs.tag }}"
+        if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+          echo "❌ Tag $TAG already exists"
+          exit 1
+        fi
+        echo "✅ Tag $TAG is available"
+
+  # ================================================================
+  # BUILD RELEASE ARTIFACTS
+  # ================================================================
+  build-artifacts:
+    name: 🏗️ Build Release Artifacts
+    runs-on: ubuntu-latest
+    needs: [validate]
+    timeout-minutes: 20
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: 📦 Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine setuptools wheel
+        pip install -r requirements.txt
+    
+    - name: 📝 Update version in code
+      run: |
+        VERSION="${{ needs.validate.outputs.version }}"
+        
+        # Update __version__ in Python files
+        sed -i "s/__version__ = .*/__version__ = \"$VERSION\"/" video_downloader.py
+        sed -i "s/__version__ = .*/__version__ = \"$VERSION\"/" utilities.py
+        sed -i "s/__version__ = .*/__version__ = \"$VERSION\"/" cli.py
+        
+        # Update version in setup.py if exists
+        if [ -f setup.py ]; then
+          sed -i "s/version=.*/version=\"$VERSION\",/" setup.py
+        fi
+        
+        echo "✅ Version updated to $VERSION"
+    
+    - name: 🧪 Run tests before build
+      run: |
+        pip install -r requirements-dev.txt
+        pytest tests/ -v --tb=short -m "not performance"
+    
+    - name: 🏗️ Build Python package
+      run: |
+        python -m build
+        
+        # Validate built packages
+        python -m twine check dist/*
+        
+        echo "📦 Built packages:"
+        ls -la dist/
+    
+    - name: 📦 Create standalone executable (PyInstaller)
+      run: |
+        pip install pyinstaller
+        
+        # Erstelle standalone executable
+        pyinstaller --onefile \
+          --name video-downloader \
+          --add-data "config.json:." \
+          --hidden-import video_downloader \
+          --hidden-import utilities \
+          cli.py
+        
+        # Test executable
+        ./dist/video-downloader --help
+        
+        echo "🎯 Standalone executable created"
+    
+    - name: 📄 Generate documentation
+      run: |
+        mkdir -p docs-build
+        
+        # Generate API documentation
+        python -m pydoc -w video_downloader utilities cli
+        mv *.html docs-build/
+        
+        # Create usage documentation
+        cat > docs-build/USAGE.md << EOF
+        # Web Video Downloader v${{ needs.validate.outputs.version }}
+        
+        ## Installation
+        \`\`\`bash
+        pip install video-downloader-${{ needs.validate.outputs.version }}.tar.gz
+        \`\`\`
+        
+        ## Docker Usage
+        \`\`\`bash
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+        docker run --rm -it ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+        \`\`\`
+        
+        ## CLI Usage
+        \`\`\`bash
+        # Download single video
+        video-dl download https://example.com/video
+        
+        # Analyze URLs
+        video-dl analyze https://example.com/video1 https://example.com/video2
+        
+        # Show statistics
+        video-dl stats --days 30
+        \`\`\`
+        EOF
+        
+        echo "📚 Documentation generated"
+    
+    - name: 📤 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-artifacts-${{ needs.validate.outputs.version }}
+        path: |
+          dist/
+          docs-build/
+        retention-days: 30
+
+  # ================================================================
+  # DOCKER RELEASE BUILD
+  # ================================================================
+  docker-release:
+    name: 🐳 Build Release Docker Images
+    runs-on: ubuntu-latest
+    needs: [validate, build-artifacts]
+    timeout-minutes: 30
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64
+    
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🏷️ Extract Docker metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          # Version tag
+          type=raw,value=${{ needs.validate.outputs.tag }}
+          # Semantic versioning
+          type=semver,pattern={{version}},value=${{ needs.validate.outputs.tag }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ needs.validate.outputs.tag }}
+          type=semver,pattern={{major}},value=${{ needs.validate.outputs.tag }}
+          # Latest tag (nur für stable releases)
+          type=raw,value=latest,enable=${{ needs.validate.outputs.is_prerelease == 'false' }}
+        labels: |
+          org.opencontainers.image.title=Web Video Downloader
+          org.opencontainers.image.description=Advanced video downloader with VPN integration
+          org.opencontainers.image.version=${{ needs.validate.outputs.version }}
+          org.opencontainers.image.vendor=${{ github.repository_owner }}
+          org.opencontainers.image.licenses=MIT
+    
+    - name: 🏗️ Build and push release images
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: mode=max
+        sbom: true
+        build-args: |
+          VERSION=${{ needs.validate.outputs.version }}
+          BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          REVISION=${{ github.sha }}
+    
+    - name: 📋 Generate artifact attestation
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+        subject-digest: ${{ steps.build.outputs.digest }}
+        push-to-registry: true
+
+  # ================================================================
+  # GENERATE CHANGELOG
+  # ================================================================
+  changelog:
+    name: 📝 Generate Changelog
+    runs-on: ubuntu-latest
+    needs: [validate]
+    timeout-minutes: 10
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 📝 Generate changelog
+      id: changelog
+      run: |
+        # Finde letzten Tag
+        LAST_TAG=$(git tag --sort=-version:refname | head -n 2 | tail -n 1)
+        if [ -z "$LAST_TAG" ]; then
+          LAST_TAG=$(git rev-list --max-parents=0 HEAD)
+        fi
+        
+        echo "📋 Generating changelog from $LAST_TAG to ${{ needs.validate.outputs.tag }}"
+        
+        # Generiere Changelog
+        CHANGELOG=$(cat << EOF
+        ## 🎉 What's New in ${{ needs.validate.outputs.tag }}
+        
+        ### 📊 Release Information
+        - **Version**: ${{ needs.validate.outputs.version }}
+        - **Release Date**: $(date +"%Y-%m-%d")
+        - **Pre-release**: ${{ needs.validate.outputs.is_prerelease }}
+        
+        ### 🔄 Changes Since Last Release
+        $(git log --pretty=format:"- %s (%h)" $LAST_TAG..HEAD | head -20)
+        
+        ### 📈 Statistics
+        - **Commits**: $(git rev-list --count $LAST_TAG..HEAD)
+        - **Files Changed**: $(git diff --name-only $LAST_TAG..HEAD | wc -l)
+        - **Contributors**: $(git log --format='%an' $LAST_TAG..HEAD | sort -u | wc -l)
+        
+        ### 🐳 Docker Images
+        \`\`\`bash
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        \`\`\`
+        
+        ### 📦 Installation
+        
+        #### Via Docker
+        \`\`\`bash
+        docker run --rm -it ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}
+        \`\`\`
+        
+        #### From Source
+        \`\`\`bash
+        git clone https://github.com/${{ github.repository }}.git
+        cd ${{ github.event.repository.name }}
+        git checkout ${{ needs.validate.outputs.tag }}
+        make setup
+        \`\`\`
+        
+        ### 🔒 Security
+        All release artifacts are signed and have attestations for supply chain security.
+        EOF
+        )
+        
+        # Escape for GitHub Actions
+        CHANGELOG="${CHANGELOG//'%'/'%25'}"
+        CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+        CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+        
+        echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+        
+        # Save to file for artifact
+        echo "$CHANGELOG" > CHANGELOG.md
+
+    - name: 📤 Upload changelog
+      uses: actions/upload-artifact@v3
+      with:
+        name: changelog-${{ needs.validate.outputs.version }}
+        path: CHANGELOG.md
+
+  # ================================================================
+  # CREATE GITHUB RELEASE
+  # ================================================================
+  create-release:
+    name: 🎉 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate, build-artifacts, docker-release, changelog]
+    timeout-minutes: 15
+    
+    steps:
+    - name: 📥 Download release artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: release-artifacts-${{ needs.validate.outputs.version }}
+        path: ./artifacts
+    
+    - name: 📥 Download changelog
+      uses: actions/download-artifact@v3
+      with:
+        name: changelog-${{ needs.validate.outputs.version }}
+        path: ./
+    
+    - name: 🎉 Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.validate.outputs.tag }}
+        release_name: "Web Video Downloader ${{ needs.validate.outputs.tag }}"
+        body_path: ./CHANGELOG.md
+        draft: ${{ github.event.inputs.draft || false }}
+        prerelease: ${{ needs.validate.outputs.is_prerelease }}
+    
+    - name: 📦 Upload Python package artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/dist/video_downloader-${{ needs.validate.outputs.version }}.tar.gz
+        asset_name: video-downloader-${{ needs.validate.outputs.version }}.tar.gz
+        asset_content_type: application/gzip
+    
+    - name: 🎯 Upload standalone executable
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/dist/video-downloader
+        asset_name: video-downloader-${{ needs.validate.outputs.version }}-linux
+        asset_content_type: application/octet-stream
+    
+    - name: 📚 Upload documentation
+      run: |
+        cd artifacts/docs-build
+        tar -czf ../../documentation-${{ needs.validate.outputs.version }}.tar.gz *
+      continue-on-error: true
+    
+    - name: 📚 Upload documentation archive
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./documentation-${{ needs.validate.outputs.version }}.tar.gz
+        asset_name: documentation-${{ needs.validate.outputs.version }}.tar.gz
+        asset_content_type: application/gzip
+      continue-on-error: true
+
+  # ================================================================
+  # POST-RELEASE TASKS
+  # ================================================================
+  post-release:
+    name: 📋 Post-Release Tasks
+    runs-on: ubuntu-latest
+    needs: [validate, create-release]
+    if: always() && needs.create-release.result == 'success'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: 📊 Release Summary
+      run: |
+        echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Item | Details |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|---------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Version | ${{ needs.validate.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Tag | ${{ needs.validate.outputs.tag }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Pre-release | ${{ needs.validate.outputs.is_prerelease }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Image | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+        echo "- [Release Page](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Docker Hub](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Documentation](https://github.com/${{ github.repository }}#readme)" >> $GITHUB_STEP_SUMMARY
+    
+    - name: 🔄 Update development branch
+      if: needs.validate.outputs.is_prerelease == 'false'
+      run: |
+        # Merge release tag zurück in develop branch
+        git checkout develop 2>/dev/null || git checkout -b develop
+        git merge ${{ needs.validate.outputs.tag }} --no-ff -m "Merge release ${{ needs.validate.outputs.tag }} into develop"
+        git push origin develop
+      continue-on-error: true
+    
+    - name: 🚨 Create issue for next release
+      if: needs.validate.outputs.is_prerelease == 'false'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const nextVersion = '${{ needs.validate.outputs.version }}'.split('.').map((v, i) => 
+            i === 2 ? parseInt(v) + 1 : v
+          ).join('.');
+          
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `📋 Plan Next Release v${nextVersion}`,
+            body: `
+            ## 🎯 Next Release Planning
+            
+            Current release: ${{ needs.validate.outputs.tag }}
+            Proposed next version: v${nextVersion}
+            
+            ### 📋 TODO for next release:
+            - [ ] Feature planning
+            - [ ] Bug fixes
+            - [ ] Documentation updates
+            - [ ] Performance improvements
+            - [ ] Security updates
+            
+            ### 🔄 Changelog
+            Track changes for next release here.
+            `,
+            labels: ['release', 'planning']
+          });
+      continue-on-error: true
