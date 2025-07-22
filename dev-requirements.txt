@@ -1,0 +1,136 @@
+# ================================================================
+# Development Dependencies für Web Video Downloader
+# ================================================================
+
+# Testing Framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0  # Parallele Test-Ausführung
+pytest-benchmark>=4.0.0  # Performance-Tests
+pytest-watch>=4.2.0  # Auto-rerun bei Änderungen
+
+# Code Quality & Linting
+black>=23.12.0  # Code-Formatierung
+isort>=5.13.0  # Import-Sortierung
+flake8>=6.1.0  # Linting
+mypy>=1.8.0  # Type-Checking
+bandit>=1.7.5  # Security-Linting
+pre-commit>=3.6.0  # Git-Hooks
+
+# Documentation
+sphinx>=7.2.0
+sphinx-rtd-theme>=2.0.0
+myst-parser>=2.0.0  # Markdown in Sphinx
+
+# Performance & Profiling
+memory-profiler>=0.61.0
+py-spy>=0.3.14
+line-profiler>=4.1.0
+
+# Development Tools
+ipython>=8.18.0  # Bessere REPL
+jupyter>=1.0.0  # Notebooks für Entwicklung
+ipdb>=0.13.13  # Debugger
+rich>=13.7.0  # Schöne Terminal-Ausgabe
+
+# HTTP & API Testing
+httpx>=0.25.0
+responses>=0.23.0  # HTTP-Mocking
+faker>=20.1.0  # Test-Daten-Generierung
+
+# Database Testing
+pytest-postgresql>=5.0.0
+factory-boy>=3.3.0  # Test-Objekt-Factory
+
+# Container Development
+testcontainers>=3.7.0  # Container für Tests
+docker>=6.1.0  # Docker-Python-API
+
+# Environment Management
+python-dotenv>=1.0.0
+environs>=10.3.0
+
+# Async Development
+aioresponses>=0.7.4  # Async HTTP-Mocking
+asynctest>=0.13.0; python_version < "3.8"
+
+# Monitoring & Metrics (Development)
+prometheus-client>=0.19.0
+structlog>=23.2.0
+
+# CLI Development & Testing
+click-testing>=0.1.0
+
+# Build & Packaging
+build>=1.0.0
+twine>=4.0.0
+setuptools-scm>=8.0.0
+
+# Git Hooks & Pre-commit
+gitpython>=3.1.40
+
+# Load Testing
+locust>=2.17.0
+
+# JSON Schema Validation
+jsonschema>=4.20.0
+
+# Development HTTP Server
+uvicorn[standard]>=0.24.0
+
+# YAML Processing
+pyyaml>=6.0.1
+
+# Advanced Testing
+hypothesis>=6.92.0  # Property-based Testing
+mutmut>=2.4.3  # Mutation Testing
+
+# Development Utilities
+watchdog>=3.0.0  # File-Watching
+python-json-logger>=2.0.7
+colorlog>=6.8.0
+
+# IDE Integration
+python-language-server[all]>=0.36.2; python_version < "3.9"
+pylsp-mypy>=0.6.7
+pylsp-rope>=0.1.11
+
+# Security Testing
+safety>=2.3.0
+semgrep>=1.45.0
+
+# Documentation Building
+mkdocs>=1.5.0
+mkdocs-material>=9.4.0
+mkdocs-mermaid2-plugin>=1.1.0
+
+# Performance Benchmarking
+asv>=0.6.1  # Airspeed Velocity
+
+# Container Security Scanning
+trivy>=0.18.0  # Via subprocess calls
+
+# Development Database
+aiosqlite>=0.19.0  # Async SQLite für Tests
+
+# Mock & Stub Generation
+vcrpy>=5.1.0  # HTTP-Interaktion-Recording
+betamax>=0.8.1
+
+# Code Coverage Enhancement
+coverage[toml]>=7.3.0
+codecov>=2.1.13
+
+# Advanced Debugging
+pudb>=2023.1  # Visual Debugger
+pdbpp>=0.10.3  # Enhanced PDB
+
+# Static Analysis
+vulture>=2.10  # Dead-Code-Detection
+radon>=6.0.1  # Code-Komplexität
+
+# Development Server & Hot Reload
+watchfiles>=0.21.0
+python-multipart>=0.0.6
