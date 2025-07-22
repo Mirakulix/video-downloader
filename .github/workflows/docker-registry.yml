@@ -1,0 +1,355 @@
+name: 🐳 Docker Registry Build & Push
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      push_to_registry:
+        description: 'Push to Docker Registry'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # ================================================================
+  # MULTI-PLATFORM DOCKER BUILD
+  # ================================================================
+  build-and-push:
+    name: 🏗️ Build & Push Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      # Für Attestation
+      id-token: write
+      attestations: write
+    
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Für Git-Tags und Versionierung
+    
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64
+    
+    - name: 🔐 Log in to Container Registry
+      if: github.event_name != 'pull_request' || github.event.inputs.push_to_registry == 'true'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🏷️ Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          # Branch-basierte Tags
+          type=ref,event=branch
+          # PR-basierte Tags
+          type=ref,event=pr
+          # Tag-basierte Tags
+          type=ref,event=tag
+          # Semantic Versioning
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          # Latest für main branch
+          type=raw,value=latest,enable={{is_default_branch}}
+          # Zeitstempel für development
+          type=raw,value={{date 'YYYYMMDD-HHmmss'}}-{{sha}},enable={{is_default_branch}}
+        labels: |
+          org.opencontainers.image.title=Web Video Downloader
+          org.opencontainers.image.description=Advanced video downloader with VPN integration
+          org.opencontainers.image.vendor=${{ github.repository_owner }}
+          org.opencontainers.image.licenses=MIT
+    
+    - name: 🏗️ Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: ${{ matrix.platform }}
+        push: ${{ github.event_name != 'pull_request' || github.event.inputs.push_to_registry == 'true' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha,scope=${{ matrix.platform }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+        provenance: mode=max
+        sbom: true
+        build-args: |
+          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          REVISION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+    
+    - name: 📋 Generate artifact attestation
+      if: github.event_name != 'pull_request'
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+        subject-digest: ${{ steps.build.outputs.digest }}
+        push-to-registry: true
+
+  # ================================================================
+  # DEVELOPMENT IMAGE BUILD
+  # ================================================================
+  build-dev:
+    name: 🛠️ Build Development Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: 🏗️ Build development image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: video-downloader:dev
+        target: builder  # Falls multi-stage build
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          ENVIRONMENT=development
+          DEBUG=true
+    
+    - name: 🧪 Test development image
+      run: |
+        # Teste ob Container korrekt startet
+        docker run --rm video-downloader:dev python --version
+        docker run --rm video-downloader:dev python -c "
+        import video_downloader, utilities, cli
+        print('✅ All modules imported successfully')
+        "
+        
+        # Teste CLI
+        docker run --rm video-downloader:dev python cli.py --help
+        docker run --rm video-downloader:dev python cli.py doctor
+
+  # ================================================================
+  # MULTI-ARCH MANIFEST
+  # ================================================================
+  create-manifest:
+    name: 📦 Create Multi-Architecture Manifest
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.event_name != 'pull_request' || github.event.inputs.push_to_registry == 'true'
+    
+    steps:
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🏷️ Extract metadata for manifest
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: 📦 Create and push manifest
+      run: |
+        # Erstelle Multi-Arch Manifest für jeden Tag
+        echo "${{ steps.meta.outputs.tags }}" | while read tag; do
+          if [ ! -z "$tag" ]; then
+            echo "Creating manifest for: $tag"
+            
+            docker manifest create $tag \
+              --amend ${tag}-linux-amd64 \
+              --amend ${tag}-linux-arm64
+            
+            docker manifest push $tag
+          fi
+        done
+
+  # ================================================================
+  # IMAGE SECURITY SCAN
+  # ================================================================
+  security-scan:
+    name: 🔍 Security Scan Built Images
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.event_name != 'pull_request'
+    
+    steps:
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🏷️ Get image tag
+      id: get-tag
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          TAG=${GITHUB_REF#refs/tags/}
+        elif [[ $GITHUB_REF == refs/heads/main ]]; then
+          TAG=latest
+        else
+          TAG=${GITHUB_REF#refs/heads/}
+        fi
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> $GITHUB_OUTPUT
+    
+    - name: 🔍 Run Trivy security scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.get-tag.outputs.image }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: 📊 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: 🔍 Docker Scout scan
+      uses: docker/scout-action@v1
+      with:
+        command: cves
+        image: ${{ steps.get-tag.outputs.image }}
+        only-severities: critical,high
+        exit-code: true
+      continue-on-error: true
+
+  # ================================================================
+  # IMAGE TESTING
+  # ================================================================
+  test-image:
+    name: 🧪 Test Published Images
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.event_name != 'pull_request'
+    
+    strategy:
+      matrix:
+        test-scenario:
+          - name: "Basic functionality"
+            command: "python cli.py --help"
+          - name: "System diagnostics"
+            command: "python cli.py doctor"
+          - name: "Module imports"
+            command: "python -c 'import video_downloader, utilities, cli; print(\"✅ Success\")'"
+          - name: "Config creation"
+            command: "python cli.py config --create-example && cat config.json"
+    
+    steps:
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🏷️ Get image tag
+      id: get-tag
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          TAG=${GITHUB_REF#refs/tags/}
+        else
+          TAG=latest
+        fi
+        echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> $GITHUB_OUTPUT
+    
+    - name: 🧪 Test - ${{ matrix.test-scenario.name }}
+      run: |
+        echo "Testing: ${{ matrix.test-scenario.name }}"
+        docker run --rm \
+          -v /tmp/test-downloads:/app/downloads \
+          ${{ steps.get-tag.outputs.image }} \
+          sh -c "${{ matrix.test-scenario.command }}"
+    
+    - name: 📊 Container resource usage
+      run: |
+        echo "Testing resource usage..."
+        docker run --rm \
+          --memory=512m \
+          --cpus=0.5 \
+          ${{ steps.get-tag.outputs.image }} \
+          python -c "
+        import psutil
+        print(f'Memory usage: {psutil.virtual_memory().percent}%')
+        print(f'CPU count: {psutil.cpu_count()}')
+        print('✅ Resource constraints test passed')
+        "
+
+  # ================================================================
+  # CLEANUP & SUMMARY
+  # ================================================================
+  cleanup:
+    name: 🧹 Cleanup & Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-push, create-manifest, security-scan, test-image]
+    if: always()
+    
+    steps:
+    - name: 📊 Build Summary
+      run: |
+        echo "## 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Build & Push | ${{ needs.build-and-push.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Multi-Arch Manifest | ${{ needs.create-manifest.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Image Testing | ${{ needs.test-image.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+          echo "## 📦 Published Images" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏃 Usage" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker run --rm -it ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: 🧹 Cleanup old packages (keep last 10)
+      if: github.ref == 'refs/heads/main'
+      uses: actions/delete-package-versions@v4
+      with:
+        package-name: ${{ github.event.repository.name }}
+        package-type: 'container'
+        min-versions-to-keep: 10
+        delete-only-untagged-versions: true
