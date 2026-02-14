@@ -169,12 +169,12 @@ docker-shell: ## 🐚 Open shell in Docker container
 
 up: ## 🚀 Start all services with docker-compose
 	@echo "$(BLUE)🚀 Starting services...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) up -d
 	@echo "$(GREEN)✅ Services started$(NC)"
 
 down: ## ⏹️ Stop all services
 	@echo "$(BLUE)⏹️ Stopping services...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) down
+	docker compose -f $(COMPOSE_FILE) down
 	@echo "$(GREEN)✅ Services stopped$(NC)"
 
 restart: ## 🔄 Restart all services
@@ -183,16 +183,16 @@ restart: ## 🔄 Restart all services
 	$(MAKE) up
 
 logs: ## 📋 Show service logs
-	docker-compose -f $(COMPOSE_FILE) logs -f
+	docker compose -f $(COMPOSE_FILE) logs -f
 
 logs-downloader: ## 📋 Show downloader logs only
-	docker-compose -f $(COMPOSE_FILE) logs -f video-downloader
+	docker compose -f $(COMPOSE_FILE) logs -f video-downloader
 
 status: ## 📊 Show service status
-	docker-compose -f $(COMPOSE_FILE) ps
+	docker compose -f $(COMPOSE_FILE) ps
 
 shell: ## 🐚 Open shell in running container
-	docker-compose -f $(COMPOSE_FILE) exec video-downloader /bin/bash
+	docker compose -f $(COMPOSE_FILE) exec video-downloader /bin/bash
 
 # ================================================================
 # Monitoring & Debugging
@@ -200,11 +200,11 @@ shell: ## 🐚 Open shell in running container
 
 monitor: ## 📈 Start monitoring stack
 	@echo "$(BLUE)📈 Starting monitoring stack...$(NC)"
-	docker-compose -f $(COMPOSE_FILE) --profile monitoring up -d
+	docker compose -f $(COMPOSE_FILE) --profile monitoring up -d
 	@echo "$(GREEN)✅ Monitoring available at http://localhost:3000$(NC)"
 
 monitor-down: ## ⏹️ Stop monitoring stack
-	docker-compose -f $(COMPOSE_FILE) --profile monitoring down
+	docker compose -f $(COMPOSE_FILE) --profile monitoring down
 
 performance: ## ⚡ Run performance tests
 	@echo "$(BLUE)⚡ Running performance tests...$(NC)"
