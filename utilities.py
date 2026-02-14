@@ -79,7 +79,7 @@ class PerformanceMonitor:
             
         except Exception as e:
             self.logger.error(f"Fehler beim Erfassen der Metriken: {e}")
-            return PerformanceMetrics(
+            metrics = PerformanceMetrics(
                 timestamp=datetime.now(),
                 cpu_percent=0.0,
                 memory_mb=0.0,
@@ -89,6 +89,12 @@ class PerformanceMonitor:
                 disk_io_write=0,
                 active_downloads=active_downloads
             )
+            self.metrics_history.append(metrics)
+
+            if len(self.metrics_history) > 1000:
+                self.metrics_history = self.metrics_history[-1000:]
+
+            return metrics
     
     def get_average_metrics(self, minutes: int = 5) -> Dict[str, float]:
         """Berechnet Durchschnitts-Metriken der letzten N Minuten"""
@@ -500,4 +506,136 @@ class ErrorRecovery:
         actions = {
             'network_timeout': {
                 'action': 'retry_with_delay',
-                'delay': min(30 * attempt, 3
+                'delay': min(30 * attempt, 300),
+                'retry': True,
+                'change_ip': False
+            },
+            'rate_limited': {
+                'action': 'retry_with_delay',
+                'delay': min(60 * attempt, 600),
+                'retry': True,
+                'change_ip': True
+            },
+            'access_denied': {
+                'action': 'retry_with_delay',
+                'delay': min(30 * attempt, 300),
+                'retry': True,
+                'change_ip': True
+            },
+            'video_not_found': {
+                'action': 'skip',
+                'delay': 0,
+                'retry': False,
+                'change_ip': False
+            },
+            'login_required': {
+                'action': 'login',
+                'delay': 0,
+                'retry': True,
+                'change_ip': False
+            }
+        }
+
+        default_action = {
+            'action': 'retry_with_delay',
+            'delay': min(30 * attempt, 300),
+            'retry': attempt < self.max_retries,
+            'change_ip': False
+        }
+
+        return actions.get(error_category, default_action)
+
+
+# ============================
+# STRUCTURED LOGGING SETUP
+# ============================
+
+def setup_structured_logging(log_level: str = "INFO"):
+    """Konfiguriert structlog für strukturiertes Logging"""
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+            structlog.dev.ConsoleRenderer()
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+
+# ============================
+# VIDEO SOURCE TRACKER
+# ============================
+
+class VideoSourceTracker:
+    """Verwaltet videos_sources.json - Tracking aller heruntergeladenen Videos"""
+
+    def __init__(self, filepath: str = "videos_sources.json"):
+        self.filepath = Path(filepath)
+        self.logger = structlog.get_logger(__name__ + ".VideoSourceTracker")
+
+    def _load(self) -> Dict[str, Any]:
+        if self.filepath.exists():
+            try:
+                with open(self.filepath, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, Exception):
+                return {}
+        return {}
+
+    def _save(self, data: Dict[str, Any]):
+        with open(self.filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    def track(self, url: str, title: str, tags: List[str],
+              performers: List[str], categories: List[str],
+              quality: Optional[str], filepath: str,
+              source_domain: str):
+        data = self._load()
+
+        if source_domain not in data:
+            data[source_domain] = []
+
+        entry = {
+            "url": url,
+            "title": title,
+            "tags": tags,
+            "performers": performers,
+            "categories": categories,
+            "quality": str(quality) if quality else None,
+            "filepath": filepath,
+            "timestamp": datetime.now().isoformat()
+        }
+
+        data[source_domain].append(entry)
+        self._save(data)
+        self.logger.info(f"Tracked video from {source_domain}: {title}")
+
+    def get_stats(self) -> Dict[str, Any]:
+        data = self._load()
+        total_videos = sum(len(videos) for videos in data.values())
+        domains = list(data.keys())
+
+        all_tags: Set[str] = set()
+        all_performers: Set[str] = set()
+        for domain_videos in data.values():
+            for video in domain_videos:
+                all_tags.update(video.get("tags", []))
+                all_performers.update(video.get("performers", []))
+
+        return {
+            "total_videos": total_videos,
+            "total_domains": len(domains),
+            "domains": {d: len(v) for d, v in data.items()},
+            "unique_tags": len(all_tags),
+            "unique_performers": len(all_performers),
+            "top_tags": sorted(all_tags)[:20],
+            "top_performers": sorted(all_performers)[:20],
+        }

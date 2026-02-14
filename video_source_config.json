@@ -1,0 +1,9 @@
+{
+  "example-site.com": {
+    "title_selector": "h1.video-title",
+    "tags_selector": ".tag-container a",
+    "performers_selector": ".performer-list a",
+    "categories_selector": ".category-list a",
+    "download_url_selectors": ["a.download-btn[href]"]
+  }
+}

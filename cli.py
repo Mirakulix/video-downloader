@@ -22,7 +22,7 @@ from rich.text import Text
 from video_downloader import WebVideoDownloader
 from utilities import (
     VideoAnalyzer, PerformanceMonitor, DownloadHistory,
-    RichDisplay, setup_structured_logging
+    RichDisplay, setup_structured_logging, VideoSourceTracker
 )
 
 
@@ -79,9 +79,17 @@ def cli(ctx: CLIContext, config: str, verbose: bool, quiet: bool):
               help='Anzahl Wiederholungsversuche bei Fehlern')
 @click.option('--analyze-only', is_flag=True,
               help='Nur URL-Analyse ohne Downloads')
+@click.option('--create-folders-from-tags', is_flag=True,
+              help='Videos in Tag-basierte Ordner organisieren')
+@click.option('--tag-folder-base', default=None,
+              help='Basis-Ordner fuer Tag-basierte Organisation')
+@click.option('--source-config', default=None,
+              help='Pfad zur Video-Source-Konfiguration')
 @pass_context
-def download(ctx: CLIContext, urls: tuple, output: str, no_vpn: bool, 
-             headless: bool, concurrent: int, retry: int, analyze_only: bool):
+def download(ctx: CLIContext, urls: tuple, output: str, no_vpn: bool,
+             headless: bool, concurrent: int, retry: int, analyze_only: bool,
+             create_folders_from_tags: bool, tag_folder_base: str,
+             source_config: str):
     """
     📥 Videos von URLs herunterladen
     
@@ -130,6 +138,12 @@ def download(ctx: CLIContext, urls: tuple, output: str, no_vpn: bool,
             'concurrent_downloads': concurrent,
             'retry_attempts': retry
         })
+        if create_folders_from_tags:
+            config['create_folders_from_tags'] = True
+        if tag_folder_base:
+            config['tag_folder_base'] = tag_folder_base
+        if source_config:
+            config['source_config_path'] = source_config
         
         # Temporäre Config speichern
         temp_config = Path('.temp_config.json')
@@ -146,7 +160,20 @@ def download(ctx: CLIContext, urls: tuple, output: str, no_vpn: bool,
             
             async with WebVideoDownloader(str(temp_config)) as downloader:
                 results = await downloader.download_multiple_urls(list(urls))
-            
+
+            # Track results in videos_sources.json
+            tracker = VideoSourceTracker(config.get('videos_sources_path', 'videos_sources.json'))
+            for result in results:
+                if result.success and result.video_info:
+                    vi = result.video_info
+                    tracker.track(
+                        url=vi.url, title=vi.title,
+                        tags=vi.tags, performers=vi.performers,
+                        categories=vi.categories, quality=vi.quality,
+                        filepath=str(result.filepath) if result.filepath else "",
+                        source_domain=vi.source_domain,
+                    )
+
             # Ergebnisse anzeigen
             display.display_progress_summary(results)
             
@@ -549,4 +576,43 @@ def doctor(ctx: CLIContext):
         ctx.console.print("  • Playwright: pip install playwright && playwright install chromium")
         ctx.console.print("  • yt-dlp: pip install yt-dlp")
         ctx.console.print("  • FFmpeg: https://ffmpeg.org/download.html")
-               
+
+
+@cli.command()
+@click.option('--sources-file', default='videos_sources.json',
+              help='Pfad zur videos_sources.json')
+@pass_context
+def sources(ctx: CLIContext, sources_file: str):
+    """
+    Statistiken aus videos_sources.json anzeigen
+
+    Zeigt eine Uebersicht aller heruntergeladenen Videos,
+    gruppiert nach Domains, Tags und Darstellern.
+    """
+    tracker = VideoSourceTracker(sources_file)
+    stats = tracker.get_stats()
+
+    if stats['total_videos'] == 0:
+        ctx.console.print("[yellow]Keine Videos in der Source-Datenbank gefunden[/yellow]")
+        return
+
+    table = Table(title="Video-Source Statistiken")
+    table.add_column("Metrik", style="cyan")
+    table.add_column("Wert", style="green")
+
+    table.add_row("Gesamt Videos", str(stats['total_videos']))
+    table.add_row("Domains", str(stats['total_domains']))
+    table.add_row("Einzigartige Tags", str(stats['unique_tags']))
+    table.add_row("Einzigartige Darsteller", str(stats['unique_performers']))
+
+    ctx.console.print(table)
+
+    if stats.get('domains'):
+        domain_table = Table(title="Videos pro Domain")
+        domain_table.add_column("Domain", style="cyan")
+        domain_table.add_column("Anzahl", style="green")
+
+        for domain, count in stats['domains'].items():
+            domain_table.add_row(domain, str(count))
+
+        ctx.console.print(domain_table)
