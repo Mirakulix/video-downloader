@@ -1,9 +1,122 @@
 {
-  "example-site.com": {
-    "title_selector": "h1.video-title",
-    "tags_selector": ".tag-container a",
-    "performers_selector": ".performer-list a",
-    "categories_selector": ".category-list a",
-    "download_url_selectors": ["a.download-btn[href]"]
+  "description": "Video source configuration with selectors and download URLs for various video websites",
+  "version": "1.0.0",
+  "sources": {
+    "example-site.com": {
+      "name": "Example Site",
+      "enabled": true,
+      "title_selector": "h1.video-title, h1.title, .video-title",
+      "tags_selector": ".tag-container a, .tags a, a[rel='tag'], meta[name='keywords']",
+      "performers_selector": ".performer-list a, .performer a, .actors a, [class*='performer'] a",
+      "categories_selector": ".category-list a, .categories a, [class*='category'] a",
+      "download_url_selectors": ["a.download-btn[href]", "a[href*='download']", ".download-link[href]"],
+      "requires_login": false,
+      "additional_selectors": {
+        "thumbnail": "meta[property='og:image']",
+        "duration": ".duration, [class*='duration']",
+        "views": ".views, [class*='view-count']"
+      }
+    },
+    "pornhub.com": {
+      "name": "Pornhub",
+      "enabled": true,
+      "title_selector": ".title:visible, h1.title",
+      "tags_selector": ".tagsContainer a, .tagGroup a, a[rel='tag']",
+      "performers_selector": ".pstar-data a, .name a, [itemprop='author'] a",
+      "categories_selector": ".categories a, .category a",
+      "download_url_selectors": [".downloadBtn[href]", "a[href*='download']"],
+      "requires_login": false,
+      "additional_selectors": {
+        "thumbnail": ".thumbImage img, .coverImage img",
+        "duration": ".duration",
+        "views": ".views"
+      }
+    },
+    "xvideos.com": {
+      "name": "XVideos",
+      "enabled": true,
+      "title_selector": "h1.title, .title",
+      "tags_selector": ".tags a, a[rel='tag'], .tag-list a",
+      "performers_selector": ".video-user a, .author-name a",
+      "categories_selector": ".categories a",
+      "download_url_selectors": ["a[href*='download']"],
+      "requires_login": false
+    },
+    "xhamster.com": {
+      "name": "xHamster",
+      "enabled": true,
+      "title_selector": "h1.title, .video-title",
+      "tags_selector": ".tags a, a[rel='tag'], .tag-list a",
+      "performers_selector": ".pstar-list a, .actor-info a",
+      "categories_selector": ".categories a, .category-list a",
+      "download_url_selectors": ["a[href*='download']"],
+      "requires_login": false
+    },
+    "redtube.com": {
+      "name": "RedTube",
+      "enabled": true,
+      "title_selector": "h1.title, .video-title",
+      "tags_selector": ".tags a, .tagList a",
+      "performers_selector": ".演员 a, .performer-list a",
+      "categories_selector": ".categories a",
+      "download_url_selectors": ["a.download-btn[href]", "a[href*='download']"],
+      "requires_login": false
+    },
+    "youporn.com": {
+      "name": "YouPorn",
+      "enabled": true,
+      "title_selector": "h1.title, .video-title",
+      "tags_selector": ".tags a, .tag-container a",
+      "performers_selector": ".performerName a, .actors a",
+      "categories_selector": ".categories a, .category-list a",
+      "download_url_selectors": ["a[href*='download']"],
+      "requires_login": false
+    },
+    "xnxx.com": {
+      "name": "XNXX",
+      "enabled": true,
+      "title_selector": "h1.title, .video-title",
+      "tags_selector": ".tags a, a[rel='tag']",
+      "performers_selector": ".video-user a, .author-name a",
+      "categories_selector": ".categories a",
+      "download_url_selectors": ["a[href*='download']"],
+      "requires_login": false
+    },
+    "xvanime.com": {
+      "name": "xvanime",
+      "enabled": true,
+      "title_selector": "h1.title, .entry-title",
+      "tags_selector": ".tags a, .post-tags a",
+      "performers_selector": ".performer a, .voice-actor a",
+      "categories_selector": ".categories a, .anime-category a",
+      "download_url_selectors": ["a[href*='download'], a[href$='.mp4']"],
+      "requires_login": false
+    },
+    "hentaihaven.xxx": {
+      "name": "Hentai Haven",
+      "enabled": true,
+      "title_selector": "h1.title, .video-title",
+      "tags_selector": ".tags a, .post-tags a",
+      "performers_selector": ".performer a, .voice-actor a",
+      "categories_selector": ".categories a",
+      "download_url_selectors": ["a[href*='download'], a[href$='.mp4']"],
+      "requires_login": false
+    },
+    "nhentai.net": {
+      "name": "nHentai",
+      "enabled": true,
+      "title_selector": "h1.title, .title",
+      "tags_selector": ".tags a, .tag-list a",
+      "performers_selector": ".artist a, .circle a",
+      "categories_selector": ".category a",
+      "download_url_selectors": ["a[href*='download']"],
+      "requires_login": false
+    }
+  },
+  "global_selectors": {
+    "fallback_title": ["h1", "title"],
+    "fallback_tags": ["a[rel='tag']", "meta[name='keywords']"],
+    "fallback_performers": [".performer a", ".actor a", "[class*='performer'] a"],
+    "fallback_categories": [".category a", "[class*='category'] a"]
   }
 }
