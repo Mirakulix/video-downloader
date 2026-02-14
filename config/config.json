@@ -1,0 +1,15 @@
+{
+  "sites": {},
+  "output_directory": "/app/downloads",
+  "nordvpn_enabled": false,
+  "ip_rotation_interval_min": 300,
+  "ip_rotation_interval_max": 1800,
+  "headless": true,
+  "timeout": 30,
+  "concurrent_downloads": 2,
+  "retry_attempts": 3,
+  "log_level": "INFO",
+  "user_agents": [
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  ]
+}

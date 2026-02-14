@@ -172,6 +172,11 @@ up: ## 🚀 Start all services with docker-compose
 	docker compose -f $(COMPOSE_FILE) up -d
 	@echo "$(GREEN)✅ Services started$(NC)"
 
+build: ## 🚀 Start all services with docker-compose
+	@echo "$(BLUE)🚀 Starting services...$(NC)"
+	docker compose -f $(COMPOSE_FILE) up --build -d
+
+
 down: ## ⏹️ Stop all services
 	@echo "$(BLUE)⏹️ Stopping services...$(NC)"
 	docker compose -f $(COMPOSE_FILE) down
@@ -197,6 +202,14 @@ shell: ## 🐚 Open shell in running container
 # ================================================================
 # Monitoring & Debugging
 # ================================================================
+
+web-ui: ## 🌐 Start Web UI (http://localhost:8080)
+	@echo "$(BLUE)🌐 Starting Web UI...$(NC)"
+	docker compose -f $(COMPOSE_FILE) --profile ui up --build
+	@echo "$(GREEN)✅ Web UI available at http://localhost:8080$(NC)"
+
+web-ui-down: ## ⏹️ Stop Web UI
+	docker compose -f $(COMPOSE_FILE) --profile ui down
 
 monitor: ## 📈 Start monitoring stack
 	@echo "$(BLUE)📈 Starting monitoring stack...$(NC)"

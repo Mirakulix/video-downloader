@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Downloader</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232734;
+    --border: #2e3348;
+    --text: #e1e4ed;
+    --text-dim: #8b8fa3;
+    --accent: #6c7ee1;
+    --accent-hover: #8290f0;
+    --green: #4ade80;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 600; }
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  .status-dot.off { background: var(--red); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.78rem;
+  }
+
+  /* URL Input */
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-dim); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+
+  button {
+    padding: 9px 20px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+
+  /* Analyze results */
+  .analyze-results { margin-top: 14px; }
+  .analyze-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+  .analyze-item .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
+  .badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .badge-low { background: #16382a; color: var(--green); }
+  .badge-medium { background: #362a10; color: var(--yellow); }
+  .badge-high { background: #3b1a1a; color: var(--red); }
+
+  /* Active Downloads */
+  .job-card {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+  }
+  .job-id { color: var(--accent); font-family: monospace; }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  .progress-fill.done { background: var(--green); }
+  .progress-fill.error { background: var(--red); }
+  .job-url {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .job-results {
+    margin-top: 8px;
+    font-size: 0.8rem;
+  }
+  .job-results .result-item {
+    padding: 3px 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .result-ok { color: var(--green); }
+  .result-fail { color: var(--red); }
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+  }
+
+  /* History Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+  }
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    font-weight: 500;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--surface2);
+  }
+  td.url-cell {
+    max-width: 350px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .success-yes { color: var(--green); }
+  .success-no { color: var(--red); }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .stat-box {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* Two-column layout for stats+history */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .analyze-item { grid-template-columns: 1fr; }
+  }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Header -->
+  <header>
+    <h1>Video Downloader</h1>
+    <div class="status-bar">
+      <span><span class="status-dot" id="ws-dot"></span>WebSocket</span>
+      <span id="sys-cpu">CPU: --</span>
+      <span id="sys-mem">RAM: --</span>
+      <span id="sys-active">Active: 0</span>
+    </div>
+  </header>
+
+  <!-- URL Input -->
+  <div class="card">
+    <h2>Download URLs</h2>
+    <textarea id="url-input" placeholder="Paste URLs here, one per line..."></textarea>
+    <div class="btn-row">
+      <button class="btn-primary" id="btn-download" onclick="startDownload()">Download</button>
+      <button class="btn-secondary" id="btn-analyze" onclick="analyzeUrls()">Analyze</button>
+      <button class="btn-secondary" onclick="document.getElementById('url-input').value=''">Clear</button>
+    </div>
+    <div class="analyze-results" id="analyze-results"></div>
+  </div>
+
+  <!-- Active Downloads -->
+  <div class="card">
+    <h2>Active Downloads</h2>
+    <div id="active-downloads">
+      <div class="empty-state">No active downloads</div>
+    </div>
+  </div>
+
+  <!-- Stats + History -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>Statistics</h2>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-box"><div class="stat-value" id="stat-total">--</div><div class="stat-label">Total</div></div>
+        <div class="stat-box"><div class="stat-value" id="stat-success">--</div><div class="stat-label">Successful</div></div>
+        <div class="stat-box"><div class="stat-value" id="stat-failed">--</div><div class="stat-label">Failed</div></div>
+        <div class="stat-box"><div class="stat-value" id="stat-rate">--</div><div class="stat-label">Success Rate</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>System</h2>
+      <div class="stats-grid" id="system-grid">
+        <div class="stat-box"><div class="stat-value" id="stat-cpu">--</div><div class="stat-label">CPU %</div></div>
+        <div class="stat-box"><div class="stat-value" id="stat-ram">--</div><div class="stat-label">RAM MB</div></div>
+        <div class="stat-box"><div class="stat-value" id="stat-uptime">--</div><div class="stat-label">Uptime</div></div>
+        <div class="stat-box"><div class="stat-value" id="stat-jobs">0</div><div class="stat-label">Active Jobs</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card">
+    <h2>Download History</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Domain</th>
+            <th>Status</th>
+            <th>Time</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="5" class="empty-state">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let ws = null;
+let jobs = {};
+
+// ---- WebSocket ----
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/progress`);
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').classList.remove('off');
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-dot').classList.add('off');
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleWS(msg);
+  };
+
+  // Keepalive
+  setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send('ping');
+  }, 30000);
+}
+
+function handleWS(msg) {
+  switch(msg.type) {
+    case 'init':
+      (msg.jobs || []).forEach(j => { jobs[j.id] = j; });
+      renderJobs();
+      break;
+    case 'download_started':
+      jobs[msg.job.id] = msg.job;
+      renderJobs();
+      break;
+    case 'download_progress':
+      if (jobs[msg.job_id]) {
+        jobs[msg.job_id].current = msg.current;
+        jobs[msg.job_id].current_url = msg.url;
+        jobs[msg.job_id].current_status = msg.status;
+        if (msg.status === 'done') jobs[msg.job_id].completed = (jobs[msg.job_id].completed || 0) + (msg.status === 'done' ? 0 : 0);
+      }
+      renderJobs();
+      break;
+    case 'download_finished':
+      jobs[msg.job.id] = msg.job;
+      renderJobs();
+      loadHistory();
+      loadStats();
+      break;
+    case 'download_error':
+      if (jobs[msg.job_id]) {
+        jobs[msg.job_id].status = 'error';
+        jobs[msg.job_id].error = msg.error;
+      }
+      renderJobs();
+      break;
+  }
+}
+
+// ---- Render active downloads ----
+function renderJobs() {
+  const el = document.getElementById('active-downloads');
+  const jobList = Object.values(jobs).filter(j => j.status === 'running' || j.status === 'error' || j.status === 'finished');
+
+  if (jobList.length === 0) {
+    el.innerHTML = '<div class="empty-state">No active downloads</div>';
+    document.getElementById('stat-jobs').textContent = '0';
+    return;
+  }
+
+  const running = jobList.filter(j => j.status === 'running').length;
+  document.getElementById('stat-jobs').textContent = running;
+  document.getElementById('sys-active').textContent = `Active: ${running}`;
+
+  el.innerHTML = jobList.map(j => {
+    const completed = (j.completed || 0) + (j.failed || 0);
+    const pct = j.total ? Math.round(completed / j.total * 100) : 0;
+    const barClass = j.status === 'finished' ? (j.failed > 0 ? '' : 'done') : (j.status === 'error' ? 'error' : '');
+
+    let resultsHtml = '';
+    if (j.results && j.results.length) {
+      resultsHtml = '<div class="job-results">' + j.results.map(r =>
+        `<div class="result-item">
+          <span class="${r.success ? 'result-ok' : 'result-fail'}">${r.success ? '\u2713' : '\u2717'}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.url)}</span>
+          ${r.error ? `<span class="result-fail">${escHtml(r.error)}</span>` : ''}
+        </div>`
+      ).join('') + '</div>';
+    }
+
+    return `<div class="job-card">
+      <div class="job-header">
+        <span><span class="job-id">${j.id}</span> &mdash; ${j.status}</span>
+        <span>${completed}/${j.total}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${barClass}" style="width:${pct}%"></div></div>
+      ${j.current_url && j.status === 'running' ? `<div class="job-url"><span class="spinner"></span>${escHtml(j.current_url)}</div>` : ''}
+      ${resultsHtml}
+    </div>`;
+  }).join('');
+}
+
+// ---- API calls ----
+async function startDownload() {
+  const text = document.getElementById('url-input').value.trim();
+  if (!text) return;
+
+  const urls = text.split('\n').map(u => u.trim()).filter(Boolean);
+  const btn = document.getElementById('btn-download');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+
+  try {
+    const res = await fetch(`${API}/api/download`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({urls}),
+    });
+    const data = await res.json();
+    if (data.error) alert(data.error);
+  } catch(e) {
+    alert('Failed to start download: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Download';
+  }
+}
+
+async function analyzeUrls() {
+  const text = document.getElementById('url-input').value.trim();
+  if (!text) return;
+
+  const urls = text.split('\n').map(u => u.trim()).filter(Boolean);
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+
+  try {
+    const res = await fetch(`${API}/api/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({urls}),
+    });
+    const data = await res.json();
+    renderAnalysis(data);
+  } catch(e) {
+    alert('Analysis failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyze';
+  }
+}
+
+function renderAnalysis(data) {
+  const el = document.getElementById('analyze-results');
+  if (!data.analyses || !data.analyses.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = data.analyses.map(a => {
+    const complexity = a.estimated_complexity || 'unknown';
+    const badgeClass = complexity === 'low' ? 'badge-low' : complexity === 'medium' ? 'badge-medium' : 'badge-high';
+    return `<div class="analyze-item">
+      <span class="url" title="${escAttr(a.url)}">${escHtml(a.url)}</span>
+      <span class="badge ${badgeClass}">${complexity}</span>
+      <span style="color:var(--text-dim)">${a.suggested_method || ''}</span>
+      <span style="color:var(--text-dim)">${a.domain || ''}</span>
+    </div>`;
+  }).join('');
+
+  if (data.report) {
+    el.innerHTML += `<div style="margin-top:10px;font-size:0.82rem;color:var(--text-dim)">
+      ${data.report.total_urls} URLs analyzed &mdash;
+      Success probability: ${(data.report.success_probability * 100).toFixed(0)}%
+    </div>`;
+  }
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API}/api/downloads?limit=30`);
+    const data = await res.json();
+    const tbody = document.getElementById('history-body');
+
+    if (!data.downloads || data.downloads.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No downloads yet</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.downloads.map(d => `<tr>
+      <td class="url-cell" title="${escAttr(d.url)}">${escHtml(d.url)}</td>
+      <td>${escHtml(d.domain || '')}</td>
+      <td class="${d.success ? 'success-yes' : 'success-no'}">${d.success ? 'OK' : 'Failed'}</td>
+      <td>${d.download_time ? d.download_time.toFixed(1) + 's' : '--'}</td>
+      <td style="white-space:nowrap">${d.timestamp || ''}</td>
+    </tr>`).join('');
+  } catch(e) {
+    console.error('Failed to load history:', e);
+  }
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch(`${API}/api/stats`);
+    const data = await res.json();
+    document.getElementById('stat-total').textContent = data.total_downloads ?? '--';
+    document.getElementById('stat-success').textContent = data.successful ?? '--';
+    document.getElementById('stat-failed').textContent = data.failed ?? '--';
+    document.getElementById('stat-rate').textContent = data.success_rate != null ? data.success_rate.toFixed(0) + '%' : '--';
+  } catch(e) {
+    console.error('Failed to load stats:', e);
+  }
+}
+
+async function loadSystem() {
+  try {
+    const res = await fetch(`${API}/api/system`);
+    const data = await res.json();
+    document.getElementById('stat-cpu').textContent = data.cpu_percent ?? '--';
+    document.getElementById('stat-ram').textContent = data.memory_mb ?? '--';
+    document.getElementById('sys-cpu').textContent = `CPU: ${data.cpu_percent}%`;
+    document.getElementById('sys-mem').textContent = `RAM: ${data.memory_mb}MB`;
+
+    const secs = data.uptime_seconds || 0;
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    document.getElementById('stat-uptime').textContent = `${h}h${m}m`;
+  } catch(e) {
+    console.error('Failed to load system:', e);
+  }
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) { return escHtml(s); }
+
+// ---- Init ----
+connectWS();
+loadHistory();
+loadStats();
+loadSystem();
+setInterval(loadSystem, 15000);
+setInterval(loadStats, 60000);
+</script>
+</body>
+</html>

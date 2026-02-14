@@ -1,8 +1,6 @@
 # Docker Compose Configuration für Web Video Downloader
 # Umfasst Development, Testing und Production Environments
 
-version: '3.8'
-
 # ==============================================================================
 # SHARED CONFIGURATION
 # ==============================================================================
@@ -75,7 +73,7 @@ services:
     volumes:
       - ./data/db:/data
       - ./scripts/init-db.sh:/init-db.sh:ro
-    command: sh -c "chmod +x /init-db.sh && /init-db.sh && tail -f /dev/null"
+    command: sh -c "/init-db.sh && tail -f /dev/null"
     networks:
       - video-downloader-network
     healthcheck:
@@ -133,27 +131,29 @@ services:
   # ----------------------------------------------------------------------------
   web-ui:
     build:
-      context: ./web-ui
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web-ui/Dockerfile
     container_name: video-downloader-ui
     restart: unless-stopped
     environment:
-      API_BASE_URL: http://video-downloader:8080
-      REDIS_URL: redis://redis:6379
+      PYTHONPATH: /app
+      CONFIG_PATH: /app/config/config.json
+      DB_PATH: /app/data/download_history.db
+      LOG_LEVEL: INFO
     ports:
       - "8080:8080"
     volumes:
-      - ./web-ui/config:/app/config
+      - ./downloads:/app/downloads
+      - ./data:/app/data
+      - ./config:/app/config
     networks:
       - video-downloader-network
-    depends_on:
-      - video-downloader
-      - redis
-    profiles:
-      - ui
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.video-downloader.rule=Host(`video-downloader.local`)"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # ----------------------------------------------------------------------------
   # DEVELOPMENT SERVICE
@@ -233,99 +233,3 @@ volumes:
     name: video-downloader-test-reports
     driver: local
 
-# ==============================================================================
-# ADDITIONAL CONFIGURATIONS
-# ==============================================================================
-
-# Development Override
----
-# docker-compose.override.yml (automatisch geladen in Development)
-version: '3.8'
-
-services:
-  video-downloader:
-    environment:
-      LOG_LEVEL: DEBUG
-      DEVELOPMENT: "true"
-    volumes:
-      - .:/app  # Live-Code-Editing
-    command: ["python", "video_downloader.py", "--log-level=DEBUG", "--no-headless"]
-
----
-# docker-compose.prod.yml (für Production)
-version: '3.8'
-
-services:
-  video-downloader:
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
-      restart_policy:
-        condition: on-failure
-        delay: 30s
-        max_attempts: 3
-    environment:
-      LOG_LEVEL: INFO
-      HEADLESS: "true"
-    healthcheck:
-      interval: 60s
-      timeout: 30s
-      retries: 5
-
-  redis:
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.2'
-
----
-# docker-compose.test.yml (für CI/CD Testing)
-version: '3.8'
-
-services:
-  test-runner:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-    environment:
-      PYTHONPATH: "/app:/app/tests"
-      CI: "true"
-    volumes:
-      - .:/app
-      - test-results:/app/test-results
-    command: |
-      sh -c "
-        python -m pytest tests/ -v \
-          --cov=. \
-          --cov-report=xml:/app/test-results/coverage.xml \
-          --cov-report=html:/app/test-results/coverage-html \
-          --junit-xml=/app/test-results/junit.xml \
-          --tb=short
-      "
-    networks:
-      - video-downloader-network
-
-  lint-check:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-    volumes:
-      - .:/app
-    command: |
-      sh -c "
-        black --check . &&
-        flake8 . &&
-        mypy . --ignore-missing-imports
-      "
-
-volumes:
-  test-results:
-    driver: local

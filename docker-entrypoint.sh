@@ -103,7 +103,7 @@ check_dependencies() {
     log "🔍 Überprüfe Dependencies..."
     
     # Python-Module prüfen
-    local required_modules=("playwright" "yt_dlp" "aiohttp" "pydantic" "beautifulsoup4")
+    local required_modules=("playwright" "yt_dlp" "aiohttp" "pydantic" "bs4")
     
     for module in "${required_modules[@]}"; do
         if ! python -c "import $module" 2>/dev/null; then

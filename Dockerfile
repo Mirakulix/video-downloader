@@ -4,7 +4,7 @@
 # ==============================================================================
 # STAGE 1: Builder Stage - Dependencies und Setup
 # ==============================================================================
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Metadata
 LABEL maintainer="your-email@example.com"
@@ -21,7 +21,6 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     gnupg2 \
-    software-properties-common \
     build-essential \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -42,7 +41,7 @@ RUN playwright install-deps chromium && \
 # ==============================================================================
 # STAGE 2: Runtime Stage - Produktions-Container
 # ==============================================================================
-FROM python:3.11-slim as runtime
+FROM python:3.11-slim AS runtime
 
 # Metadata kopieren
 LABEL maintainer="your-email@example.com"
@@ -75,19 +74,17 @@ RUN apt-get update && apt-get install -y \
     # Browser Runtime Dependencies
     libnss3 \
     libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
     libdrm2 \
     libxss1 \
-    libgconf-2-4 \
     libxrandr2 \
-    libasound2 \
+    libasound2t64 \
     libpangocairo-1.0-0 \
-    libatk1.0-0 \
     libcairo-gobject2 \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0 \
+    libgtk-3-0t64 \
+    libgdk-pixbuf-2.0-0 \
     # Utility tools
     procps \
     net-tools \
@@ -95,7 +92,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # NordVPN CLI installieren
-RUN curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh | sh
+RUN curl -fsSL https://repo.nordvpn.com/gpg/nordvpn_public.asc | gpg --dearmor -o /usr/share/keyrings/nordvpn.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/nordvpn.gpg] https://repo.nordvpn.com/deb/nordvpn/debian stable main" > /etc/apt/sources.list.d/nordvpn.list && \
+    apt-get update && apt-get install -y nordvpn && \
+    rm -rf /var/lib/apt/lists/*
 
 # Non-root User erstellen für Sicherheit
 RUN groupadd -g ${GROUP_ID} appuser && \

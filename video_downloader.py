@@ -24,7 +24,7 @@ import aiohttp
 import yt_dlp
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, Browser, Page, Playwright
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 # ============================
@@ -47,7 +47,8 @@ class SiteConfig(BaseModel):
     human_delay_min: float = 1.0
     human_delay_max: float = 3.0
 
-    @validator('video_button', 'download_link', pre=True)
+    @field_validator('video_button', 'download_link', mode='before')
+    @classmethod
     def convert_strings_to_list(cls, v):
         if isinstance(v, str):
             return [v]
