@@ -2,12 +2,12 @@
   // ================================================================
   // VSCode Settings für Web Video Downloader Development
   // ================================================================
-  
+
   // Python Configuration
   "python.defaultInterpreterPath": "./venv/bin/python",
   "python.terminal.activateEnvironment": true,
   "python.terminal.activateEnvInCurrentTerminal": true,
-  
+
   // Linting & Formatting
   "python.linting.enabled": true,
   "python.linting.flake8Enabled": true,
@@ -19,20 +19,20 @@
   "python.linting.mypyEnabled": true,
   "python.linting.banditEnabled": true,
   "python.linting.pylintEnabled": false,
-  
+
   // Black Formatter
   "python.formatting.provider": "black",
   "python.formatting.blackArgs": [
     "--line-length=100",
     "--target-version=py39"
   ],
-  
+
   // Import Organization
   "python.sortImports.args": [
     "--profile=black",
     "--line-length=100"
   ],
-  
+
   // Testing Configuration
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
@@ -41,26 +41,26 @@
     "-v",
     "--tb=short"
   ],
-  
+
   // Type Checking
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.autoImportCompletions": true,
   "python.analysis.autoSearchPaths": true,
   "python.analysis.diagnosticMode": "workspace",
   "python.analysis.stubPath": "./typings",
-  
+
   // Editor Configuration
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
   "editor.codeActionsOnSave": {
-    "source.organizeImports": true,
-    "source.fixAll": true
+    "source.organizeImports": "explicit",
+    "source.fixAll": "explicit"
   },
   "editor.rulers": [100],
   "editor.tabSize": 4,
   "editor.insertSpaces": true,
   "editor.trimAutoWhitespace": true,
-  
+
   // Files & Workspace
   "files.exclude": {
     "**/__pycache__": true,
@@ -83,7 +83,7 @@
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
-  
+
   // Search Configuration
   "search.exclude": {
     "**/venv": true,
@@ -93,17 +93,17 @@
     "**/htmlcov": true,
     "**/*.pyc": true
   },
-  
+
   // Git Integration
   "git.ignoreLimitWarning": true,
   "git.autofetch": true,
   "git.enableSmartCommit": true,
   "git.confirmSync": false,
-  
+
   // Docker Configuration
   "docker.languageserver.formatter.ignoreMultilineInstructions": true,
   "docker.attachShellCommand.linuxContainer": "/bin/bash",
-  
+
   // Terminal Configuration
   "terminal.integrated.env.linux": {
     "PYTHONPATH": "${workspaceFolder}"
@@ -114,19 +114,19 @@
   "terminal.integrated.env.windows": {
     "PYTHONPATH": "${workspaceFolder}"
   },
-  
+
   // Extensions & IntelliSense
   "extensions.ignoreRecommendations": false,
   "workbench.editor.enablePreview": false,
   "explorer.confirmDelete": false,
   "explorer.confirmDragAndDrop": false,
-  
+
   // Language Specific Settings
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": true
+      "source.organizeImports": "explicit"
     }
   },
   "[json]": {
@@ -148,12 +148,12 @@
     "editor.formatOnSave": true,
     "editor.wordWrap": "on"
   },
-  
+
   // Debugging Configuration
   "debug.console.fontSize": 12,
   "debug.console.wordWrap": true,
   "debug.terminal.clearBeforeReusing": true,
-  
+
   // Performance Settings
   "python.analysis.indexing": true,
   "python.analysis.packageIndexDepths": [
@@ -162,15 +162,15 @@
       "depth": 2
     }
   ],
-  
+
   // Security & Privacy
   "telemetry.telemetryLevel": "off",
   "update.showReleaseNotes": false,
-  
+
   // Jupyter Integration (für Development Notebooks)
   "jupyter.askForKernelRestart": false,
   "jupyter.alwaysTrustNotebooks": true,
-  
+
   // REST Client (für API-Tests)
   "rest-client.environmentVariables": {
     "local": {
@@ -178,25 +178,25 @@
       "token": "development-token"
     }
   },
-  
+
   // Live Server (für Dokumentation)
   "liveServer.settings.donotShowInfoMsg": true,
   "liveServer.settings.donotVerifyTags": true,
-  
+
   // Problem Matchers
   "problemMatcher.fileLocation": "relative",
-  
+
   // Code Lens
   "python.analysis.inlayHints.functionReturnTypes": true,
   "python.analysis.inlayHints.variableTypes": true,
-  
+
   // Auto-completion
   "python.analysis.completeFunctionParens": true,
   "python.analysis.autoImportCompletions": true,
-  
+
   // Workspace Trust
   "security.workspace.trust.untrustedFiles": "open",
-  
+
   // Custom Tasks
   "tasks.version": "2.0.0"
 }
